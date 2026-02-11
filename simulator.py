@@ -97,9 +97,18 @@ class GravitySimulator:
         
         self.init_gl()
         
-        pygame.font.init()
-        self.font = pygame.font.SysFont('monospace', 14)
-        self.title_font = pygame.font.SysFont('monospace', 18, bold=True)
+        if pygame.font.get_init():
+            def get_font(name, size, bold=False):
+                try:
+                    return pygame.font.SysFont(name, size, bold)
+                except:
+                    return pygame.font.Font(None, size)
+            
+            self.font = get_font('freesans,monospace,arial', 14)
+            self.title_font = get_font('freesans,monospace,arial', 18, bold=True)
+        else:
+            self.font = None
+            self.title_font = None
         
         self.planet_counter = 0
         # y=20 so that background (drawn at y-10) starts at 10, matching the left panel
@@ -123,7 +132,6 @@ class GravitySimulator:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         glClearColor(0.02, 0.02, 0.05, 1.0)
         
         glEnable(GL_LIGHTING)
@@ -278,7 +286,9 @@ class GravitySimulator:
                 idx = i * width + j
                 indices.extend([idx, idx + width])
                 
-        self.grid_indices = np.array(indices, dtype=np.uint32)
+        # Use uint16 on web if possible for better compatibility (WebGL 1.0)
+        index_type = np.uint16 if self.grid_resolution <= 150 else np.uint32
+        self.grid_indices = np.array(indices, dtype=index_type)
         
         # 3. Create initial vertex array container (N, 3)
         num_verts = (resolution + 1) * (resolution + 1)
@@ -288,8 +298,13 @@ class GravitySimulator:
         
         # 4. Generate Buffers if not exists
         if self.vbo_id is None:
-            self.vbo_id = glGenBuffers(1)
-            self.ibo_id = glGenBuffers(1)
+            # Handle potential array return from glGenBuffers
+            vbos = glGenBuffers(2)
+            if hasattr(vbos, '__iter__'):
+                self.vbo_id, self.ibo_id = vbos
+            else:
+                self.vbo_id = vbos
+                self.ibo_id = glGenBuffers(1)
             
         # 5. Upload Indices (Static)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ibo_id)
@@ -344,7 +359,8 @@ class GravitySimulator:
         
         # Bind IBO and Draw
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ibo_id)
-        glDrawElements(GL_LINES, len(self.grid_indices), GL_UNSIGNED_INT, None) # None means use bound buffer
+        gl_idx_type = GL_UNSIGNED_SHORT if self.grid_indices.dtype == np.uint16 else GL_UNSIGNED_INT
+        glDrawElements(GL_LINES, len(self.grid_indices), gl_idx_type, None) # None means use bound buffer
         
         # Cleanup
         glBindBuffer(GL_ARRAY_BUFFER, 0)
