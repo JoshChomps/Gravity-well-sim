@@ -9,12 +9,15 @@ import colorsys
 import asyncio
 from typing import List, Optional
 
-from config import G, GRID_EXTENT, TRAIL_LENGTH, GRID_RESOLUTION, MAX_GRID_RESOLUTION
+from config import G, GRID_EXTENT, TRAIL_LENGTH, GRID_RESOLUTION, MAX_GRID_RESOLUTION, IS_WEB
 from models import Planet
 from ui import PlanetEditor, Button
 
 class Starfield:
     def __init__(self, num_stars=1500, radius=300):
+        # Reduce star count on web for performance
+        if IS_WEB:
+            num_stars = 500
         self.stars = []
         for _ in range(num_stars):
             # Random point in sphere
@@ -44,12 +47,20 @@ class Starfield:
 
 class GravitySimulator:
     def __init__(self, width=1200, height=800):
+        print("Initializing GravitySimulator...")
         pygame.init()
         pygame.display.set_caption("3D Gravity Simulator - Spacetime Curvature Visualization")
         
         self.width = width
         self.height = height
-        self.display = pygame.display.set_mode((width, height), DOUBLEBUF | OPENGL | RESIZABLE)
+        
+        # Web compatibility: Disable RESIZABLE, maybe disable DOUBLEBUF if problematic (usually fine)
+        flags = DOUBLEBUF | OPENGL
+        if not IS_WEB:
+            flags |= RESIZABLE
+            
+        print(f"Creating display mode: {width}x{height}, flags={flags}")
+        self.display = pygame.display.set_mode((width, height), flags)
         
         # Camera
         self.camera_distance = 40
@@ -95,6 +106,7 @@ class GravitySimulator:
         self.vbo_id = None
         self.ibo_id = None
         
+        print("Calling init_gl...")
         self.init_gl()
         
         if pygame.font.get_init():
@@ -125,13 +137,16 @@ class GravitySimulator:
         self.quit_button = Button(width - 110, height - 50, 100, 35, "EXIT", (150, 50, 50))
         
         # Load default scenario after editor is created
+        print("Loading default preset...")
         self.load_preset(1)
+        print("Initialization complete.")
         
     def init_gl(self):
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_LINE_SMOOTH)
+        if not IS_WEB:
+            glEnable(GL_LINE_SMOOTH)
         glClearColor(0.02, 0.02, 0.05, 1.0)
         
         glEnable(GL_LIGHTING)
@@ -145,10 +160,21 @@ class GravitySimulator:
         glLightfv(GL_LIGHT0, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
         
         # Initialize UI texture
-        self.ui_texture = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.ui_texture)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        print("Generating UI texture...")
+        try:
+            tex = glGenTextures(1)
+            # Handle list/array return
+            if hasattr(tex, '__iter__'):
+                self.ui_texture = tex[0]
+            else:
+                self.ui_texture = int(tex)
+                
+            print(f"UI Texture ID: {self.ui_texture}")
+            glBindTexture(GL_TEXTURE_2D, self.ui_texture)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        except Exception as e:
+            print(f"Error creating texture: {e}")
         
     def setup_projection(self):
         glMatrixMode(GL_PROJECTION)
@@ -260,6 +286,9 @@ class GravitySimulator:
 
     def init_grid_arrays(self):
         """Initialize VBOs and IBOs for rendering."""
+        if IS_WEB:
+            return # Skip arrays on web, use immediate mode
+
         if self.grid_resolution == self.cached_resolution and not self.grid_arrays_dirty:
             return
             
@@ -321,7 +350,67 @@ class GravitySimulator:
     def draw_curved_grid(self):
         if not self.show_grid:
             return
+
+        # Immediate mode fallback for Web (most robust)
+        if IS_WEB:
+            glDisable(GL_LIGHTING)
+            glLineWidth(1.0)
+            glColor4f(0.2, 0.4, 0.8, 0.4)
             
+            resolution = self.grid_resolution
+            extent = GRID_EXTENT
+            step = (extent * 2) / resolution
+            
+            # Simple grid loop
+            glBegin(GL_LINES)
+            for i in range(resolution + 1):
+                z = -extent + i * step
+                for j in range(resolution):
+                    x1 = -extent + j * step
+                    x2 = x1 + step
+                    
+                    # Calculate Y for x1, z
+                    y1 = 0
+                    for planet in self.planets:
+                        dist = math.sqrt((x1 - planet.position[0])**2 + (z - planet.position[2])**2)
+                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
+                        y1 -= (planet.mass / (dist_eff * 5.0)) * 0.15
+                        
+                    # Calculate Y for x2, z
+                    y2 = 0
+                    for planet in self.planets:
+                        dist = math.sqrt((x2 - planet.position[0])**2 + (z - planet.position[2])**2)
+                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
+                        y2 -= (planet.mass / (dist_eff * 5.0)) * 0.15
+                        
+                    glVertex3f(x1, y1, z)
+                    glVertex3f(x2, y2, z)
+                    
+            for i in range(resolution + 1):
+                x = -extent + i * step
+                for j in range(resolution):
+                    z1 = -extent + j * step
+                    z2 = z1 + step
+                    
+                    y1 = 0
+                    for planet in self.planets:
+                        dist = math.sqrt((x - planet.position[0])**2 + (z1 - planet.position[2])**2)
+                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
+                        y1 -= (planet.mass / (dist_eff * 5.0)) * 0.15
+                        
+                    y2 = 0
+                    for planet in self.planets:
+                        dist = math.sqrt((x - planet.position[0])**2 + (z2 - planet.position[2])**2)
+                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
+                        y2 -= (planet.mass / (dist_eff * 5.0)) * 0.15
+                        
+                    glVertex3f(x, y1, z1)
+                    glVertex3f(x, y2, z2)
+            glEnd()
+            glEnable(GL_LIGHTING)
+            return
+
+        # Desktop VBO Implementation
         # Ensure arrays are ready
         if self.grid_arrays_dirty or self.cached_resolution != self.grid_resolution:
             self.init_grid_arrays()
@@ -367,6 +456,7 @@ class GravitySimulator:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
         glDisableClientState(GL_VERTEX_ARRAY)
         glEnable(GL_LIGHTING)
+
         
     def draw_force_field(self):
         if not self.show_force_vectors:
@@ -779,6 +869,10 @@ class GravitySimulator:
                     ui_surface.blit(self.font.render(f"{'●' if state else '○'} {name}", True, color), (25, y))
                     y += 16 # Compact spacing (was 18)
                 
+                if IS_WEB:
+                    # Simple text on web to avoid texture/blit issues if any
+                    pass
+                
                 # Grid Resolution Control
                 y += 10
                 res_text = self.font.render(f"Grid Res: {self.grid_resolution}", True, (200, 200, 200))
@@ -1041,6 +1135,8 @@ class GravitySimulator:
                 self.last_mouse_pos = event.pos
     
     def render(self):
+        # debug logs only occasionally to avoid spam
+        # print("Render frame...") 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.setup_projection()
         self.setup_camera()
