@@ -286,8 +286,6 @@ class GravitySimulator:
 
     def init_grid_arrays(self):
         """Initialize VBOs and IBOs for rendering."""
-        if IS_WEB:
-            return # Skip arrays on web, use immediate mode
 
         if self.grid_resolution == self.cached_resolution and not self.grid_arrays_dirty:
             return
@@ -351,66 +349,6 @@ class GravitySimulator:
         if not self.show_grid:
             return
 
-        # Immediate mode fallback for Web (most robust)
-        if IS_WEB:
-            glDisable(GL_LIGHTING)
-            glLineWidth(1.0)
-            glColor4f(0.2, 0.4, 0.8, 0.4)
-            
-            resolution = self.grid_resolution
-            extent = GRID_EXTENT
-            step = (extent * 2) / resolution
-            
-            # Simple grid loop
-            glBegin(GL_LINES)
-            for i in range(resolution + 1):
-                z = -extent + i * step
-                for j in range(resolution):
-                    x1 = -extent + j * step
-                    x2 = x1 + step
-                    
-                    # Calculate Y for x1, z
-                    y1 = 0
-                    for planet in self.planets:
-                        dist = math.sqrt((x1 - planet.position[0])**2 + (z - planet.position[2])**2)
-                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
-                        y1 -= (planet.mass / (dist_eff * 5.0)) * 0.15
-                        
-                    # Calculate Y for x2, z
-                    y2 = 0
-                    for planet in self.planets:
-                        dist = math.sqrt((x2 - planet.position[0])**2 + (z - planet.position[2])**2)
-                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
-                        y2 -= (planet.mass / (dist_eff * 5.0)) * 0.15
-                        
-                    glVertex3f(x1, y1, z)
-                    glVertex3f(x2, y2, z)
-                    
-            for i in range(resolution + 1):
-                x = -extent + i * step
-                for j in range(resolution):
-                    z1 = -extent + j * step
-                    z2 = z1 + step
-                    
-                    y1 = 0
-                    for planet in self.planets:
-                        dist = math.sqrt((x - planet.position[0])**2 + (z1 - planet.position[2])**2)
-                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
-                        y1 -= (planet.mass / (dist_eff * 5.0)) * 0.15
-                        
-                    y2 = 0
-                    for planet in self.planets:
-                        dist = math.sqrt((x - planet.position[0])**2 + (z2 - planet.position[2])**2)
-                        dist_eff = math.sqrt(dist*dist + 1.2*1.2)
-                        y2 -= (planet.mass / (dist_eff * 5.0)) * 0.15
-                        
-                    glVertex3f(x, y1, z1)
-                    glVertex3f(x, y2, z2)
-            glEnd()
-            glEnable(GL_LIGHTING)
-            return
-
-        # Desktop VBO Implementation
         # Ensure arrays are ready
         if self.grid_arrays_dirty or self.cached_resolution != self.grid_resolution:
             self.init_grid_arrays()
@@ -448,7 +386,13 @@ class GravitySimulator:
         
         # Bind IBO and Draw
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ibo_id)
-        gl_idx_type = GL_UNSIGNED_SHORT if self.grid_indices.dtype == np.uint16 else GL_UNSIGNED_INT
+        
+        # Logic to choose index type based on IS_WEB or desktop
+        if IS_WEB:
+             gl_idx_type = GL_UNSIGNED_SHORT
+        else:
+             gl_idx_type = GL_UNSIGNED_SHORT if self.grid_indices.dtype == np.uint16 else GL_UNSIGNED_INT
+             
         glDrawElements(GL_LINES, len(self.grid_indices), gl_idx_type, None) # None means use bound buffer
         
         # Cleanup
@@ -886,6 +830,12 @@ class GravitySimulator:
                 
                 self.res_minus_button.draw(ui_surface, self.font)
                 self.res_plus_button.draw(ui_surface, self.font)
+            
+            # FPS Counter (Top Right of Panel)
+            fps = int(self.clock.get_fps())
+            fps_color = (100, 255, 100) if fps > 50 else (255, 200, 50) if fps > 30 else (255, 50, 50)
+            fps_text = self.font.render(f"FPS: {fps}", True, fps_color)
+            ui_surface.blit(fps_text, (200, 10))
             
             # Grid Res Controls drawn above
             
