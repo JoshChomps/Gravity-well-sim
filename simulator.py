@@ -831,11 +831,7 @@ class GravitySimulator:
                 self.res_minus_button.draw(ui_surface, self.font)
                 self.res_plus_button.draw(ui_surface, self.font)
             
-            # FPS Counter (Top Right of Panel)
-            fps = int(self.clock.get_fps())
-            fps_color = (100, 255, 100) if fps > 50 else (255, 200, 50) if fps > 30 else (255, 50, 50)
-            fps_text = self.font.render(f"FPS: {fps}", True, fps_color)
-            ui_surface.blit(fps_text, (200, 10))
+            # Grid Res Controls drawn above
             
             # Grid Res Controls drawn above
             
