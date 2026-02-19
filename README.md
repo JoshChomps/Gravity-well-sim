@@ -7,10 +7,16 @@ A physics simulation visualizing gravitational forces and spacetime curvature.
 You do **NOT** need to do both. Just pick the one that is easiest for you.
 
 ### Option A: VS Code (Recommended)
-1.  Open this folder in VS Code.
-2.  Look at the bottom-right corner for the Python version.
-3.  Click it and select the **`.venv`** environment (Python 3.12.x).
-4.  Open `main.py` and press the **Run** button (play icon).
+1.  Download and install [Python 3.12+](https://www.python.org/downloads/).
+2.  Open a terminal/command prompt in this folder.
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements-dev.txt
+    ```
+4.  Run the simulation:
+    ```bash
+    python main.py
+    ```
 
 *This sets VS Code to always use the correct isolated environment, avoiding conflicts with Miniconda.*
 
