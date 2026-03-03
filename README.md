@@ -19,11 +19,3 @@ You do **NOT** need to do both. Just pick the one that is easiest for you.
 2.  Double-click **`run.bat`**.
 
 *This script automatically finds and uses the correct environment for you.*
-
----
-
-## Web Deployment
-To build for the web:
-1.  Open a terminal in this folder.
-2.  Run `pygbag .`
-3.  Go to `localhost:8000` in your browser.

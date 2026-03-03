@@ -1055,7 +1055,6 @@ class GravitySimulator:
             print(f"\nError occurred: {e}")
             import traceback
             traceback.print_exc()
-            # On web, input() might freeze/crash, so we avoid it or handle gracefully
-            # input("\nPress Enter to exit...") 
+            input("\nPress Enter to exit...") 
         finally:
             pygame.quit()
