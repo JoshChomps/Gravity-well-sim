@@ -393,7 +393,6 @@ class GravitySimulator:
             FZ += (force_mag * (-dz / dist_safe)) * mask
             
             # Also calculate Y displacement for start positions (grid curvature)
-            # Also calculate Y displacement for start positions (grid curvature)
             # Plummer Softening matching draw_curved_grid
             softening = 1.2
             dist_eff = np.sqrt(dist*dist + softening*softening)
@@ -782,12 +781,6 @@ class GravitySimulator:
             # Planet editor - update position dynamically
             self.planet_editor.x = self.width - 280
             self.planet_editor.draw(ui_surface, self.font, self.title_font)
-            
-            # Presets panel - dynamic position
-            # Height increased for scaling info (was 150)
-            presets_h = 170
-            if self.presets_panel_collapsed:
-                presets_h = 30
             
             # Presets panel - dynamic position
             # Height increased for scaling info (was 150)
