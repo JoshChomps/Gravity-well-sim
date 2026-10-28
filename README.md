@@ -19,3 +19,13 @@ You do **NOT** need to do both. Just pick the one that is easiest for you.
 2.  Double-click **`run.bat`**.
 
 *This script automatically finds and uses the correct environment for you.*
+
+## Tests
+
+The physics runs without a window in the tests: Newton's third law, momentum
+and energy conservation, a circular orbit holding its radius, merges conserving
+mass, momentum and volume, and every preset running without blowing up.
+
+```bash
+python -m unittest discover -s tests
+```

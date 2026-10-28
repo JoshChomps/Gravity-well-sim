@@ -224,12 +224,12 @@ class GravitySimulator:
             self.planets.append(self.create_planet([3, 0, 0], [0, v*0.5, v], 150, 0.9, (0.5, 1.0, 0.8), "Beta"))
             self.planets.append(self.create_planet([0, 0, 0], [0, -v, -2*v], 150, 0.9, (0.8, 0.5, 1.0), "Gamma"))
         elif preset_num == 5: # Deep Space Collision
-            for i in range(10):
+            for _ in range(10):
                 self.planets.append(self.create_planet(
                     [random.uniform(-10, -5), random.uniform(-2, 2), random.uniform(-5, 5)],
                     [random.uniform(1, 2), 0, 0], 
                     random.uniform(5, 20), random.uniform(0.3, 0.6)))
-            for i in range(10):
+            for _ in range(10):
                 self.planets.append(self.create_planet(
                     [random.uniform(5, 10), random.uniform(-2, 2), random.uniform(-5, 5)],
                     [random.uniform(-2, -1), 0, 0], 
@@ -243,7 +243,7 @@ class GravitySimulator:
         
         # Initialize accelerations for existing planets
         forces = self.calculate_forces()
-        for planet, force in zip(self.planets, forces):
+        for planet, force in zip(self.planets, forces, strict=True):
             if planet.mass > 0:
                 planet.acceleration = force / planet.mass
         
@@ -596,7 +596,7 @@ class GravitySimulator:
         forces = self.calculate_forces()
         
         # 3. Second half-update of velocity
-        for planet, force in zip(self.planets, forces):
+        for planet, force in zip(self.planets, forces, strict=True):
             if planet.mass > 0:
                 new_acceleration = force / planet.mass
             else:
