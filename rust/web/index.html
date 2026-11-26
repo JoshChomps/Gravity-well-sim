@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>3D Gravity Simulator</title>
+    <style>
+        html, body, canvas {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: absolute;
+            background: #05050d;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- tabindex lets the canvas take keyboard focus; the right mouse button pans, so no context menu -->
+    <canvas id="glcanvas" tabindex="1" oncontextmenu="return false"></canvas>
+    <!-- macroquad's bundled network plugin assigns this global without
+         declaring it, which throws in strict mode; declaring it keeps the
+         console clean (the plugin itself is unused). -->
+    <script>var register_plugin;</script>
+    <script src="mq_js_bundle.js"></script>
+    <script>
+        load("gravity-sim.wasm");
+        document.getElementById("glcanvas").focus();
+    </script>
+</body>
+</html>

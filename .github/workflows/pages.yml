@@ -1,0 +1,50 @@
+# Tests the Rust version, builds its WebAssembly version and publishes it to
+# GitHub Pages (the live demo linked from the README).
+name: Test and publish web build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Test (includes the Python-parity tests)
+        run: cargo test
+      - name: Build the web version
+        run: |
+          cargo build --release --target wasm32-unknown-unknown
+          bundle="$(dirname "$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "macroquad") | .manifest_path')")/js/mq_js_bundle.js"
+          mkdir -p dist
+          cp web/index.html "$bundle" target/wasm32-unknown-unknown/release/gravity-sim.wasm dist/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: rust/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
